@@ -1,22 +1,17 @@
-"""Mobject representing curly braces."""
-
-__all__ = ["Brace", "BraceLabel", "BraceText"]
-
-
 import numpy as np
 
-from ...animation.composition import AnimationGroup
-from ...constants import *
-from ...animation.fading import FadeIn
-from ...animation.growing import GrowFromCenter
-from ...mobject.svg.tex_mobject import MathTex
-from ...mobject.svg.tex_mobject import Tex
-from ...mobject.types.vectorized_mobject import VMobject
-from ...utils.config_ops import digest_config
-from ...utils.space_ops import get_norm
+from manimlib.animation.composition import AnimationGroup
+from manimlib.constants import *
+from manimlib.animation.fading import FadeIn
+from manimlib.animation.growing import GrowFromCenter
+from manimlib.mobject.svg.tex_mobject import TexMobject
+from manimlib.mobject.svg.tex_mobject import TextMobject
+from manimlib.mobject.types.vectorized_mobject import VMobject
+from manimlib.utils.config_ops import digest_config
+from manimlib.utils.space_ops import get_norm
+import copy
 
-
-class Brace(MathTex):
+class Brace(TexMobject):
     CONFIG = {
         "buff": 0.2,
         "width_multiplier": 2,
@@ -36,11 +31,10 @@ class Brace(MathTex):
         # Adding int(target_width) qquads gives approximately the right width
         num_quads = np.clip(
             int(self.width_multiplier * target_width),
-            self.min_num_quads,
-            self.max_num_quads,
+            self.min_num_quads, self.max_num_quads
         )
         tex_string = "\\underbrace{%s}" % (num_quads * "\\qquad")
-        MathTex.__init__(self, tex_string, **kwargs)
+        TexMobject.__init__(self, tex_string, **kwargs)
         self.tip_point_index = np.argmin(self.get_all_points()[:, 1])
         self.stretch_to_fit_width(target_width)
         self.shift(left - self.get_corner(UP + LEFT) + self.buff * DOWN)
@@ -49,7 +43,11 @@ class Brace(MathTex):
 
     def put_at_tip(self, mob, use_next_to=True, **kwargs):
         if use_next_to:
-            mob.next_to(self.get_tip(), np.round(self.get_direction()), **kwargs)
+            mob.next_to(
+                self.get_tip(),
+                np.round(self.get_direction()),
+                **kwargs
+            )
         else:
             mob.move_to(self.get_tip())
             buff = kwargs.get("buff", DEFAULT_MOBJECT_TO_MOBJECT_BUFFER)
@@ -58,12 +56,12 @@ class Brace(MathTex):
         return self
 
     def get_text(self, *text, **kwargs):
-        text_mob = Tex(*text)
+        text_mob = TextMobject(*text)
         self.put_at_tip(text_mob, **kwargs)
         return text_mob
 
     def get_tex(self, *tex, **kwargs):
-        tex_mob = MathTex(*tex)
+        tex_mob = TexMobject(*tex)
         self.put_at_tip(tex_mob, **kwargs)
         return tex_mob
 
@@ -80,7 +78,7 @@ class Brace(MathTex):
 
 class BraceLabel(VMobject):
     CONFIG = {
-        "label_constructor": MathTex,
+        "label_constructor": TexMobject,
         "label_scale": 1,
     }
 
@@ -126,6 +124,16 @@ class BraceLabel(VMobject):
         self.change_label(*text)
         return self
 
+    def copy(self):
+        copy_mobject = copy.copy(self)
+        copy_mobject.brace = self.brace.copy()
+        copy_mobject.label = self.label.copy()
+        copy_mobject.submobjects = [copy_mobject.brace, copy_mobject.label]
+
+        return copy_mobject
+
 
 class BraceText(BraceLabel):
-    CONFIG = {"label_constructor": Tex}
+    CONFIG = {
+        "label_constructor": TextMobject
+    }
